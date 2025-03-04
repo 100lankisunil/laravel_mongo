@@ -13,7 +13,6 @@ class categoryController extends Controller
     {
         if ($request->ajax()) {
             $tasks = Task::query();
-
             // Filter by category if not "all"
             if (!empty($request->category_id) && $request->category_id !== 'all') {
                 $tasks->where('category_id', $request->category_id);
@@ -39,7 +38,7 @@ class categoryController extends Controller
                     $inProgress = $task->status == 'in-progress' ? 'selected' : '';
 
                     return '
-                        <select class="form-select status-dropdown" data-id="' . $task->_id . '">
+                        <select class="form-select status-dropdown task_dropdown_option" data-id="' . $task->_id . '">
                             <option value="pending" ' . $pending . '>Pending</option>
                             <option value="completed" ' . $completed . '>Completed</option>
                             <option value="in-progress" ' . $inProgress . '>In Progress</option>
@@ -86,6 +85,50 @@ class categoryController extends Controller
         }
     }
 
+    public function viewTask(Request $request)
+    {
+        $task_id = $request->id;
+        if ($task_id) {
+            $task = Task::with('category')->find($task_id);
+            if ($task) {
+                return response()->json([
+                    'status' => true,
+                    'task' => $task
+                ]);
+            }
+        }
+    }
+
+    public function save_task(Request $request)
+    {
+        $task_id = $request->task_id;
+        $task_name = $request->task_name;
+        $task_description = $request->task_description;
+        $category_id = $request->tasks_category;
+        $task_status = $request->task_status;
+
+        if ($task_id) {
+            $update_task = Task::find($task_id);
+            if ($update_task) {
+                $update_task->category_id = $category_id;
+                $update_task->title = $task_name;
+                $update_task->description = $task_description;
+                $update_task->status = $task_status;
+                if ($update_task->save()) {
+                    return response()->json([
+                        'status' => true,
+                        'message' => 'Task updated successfully'
+                    ]);
+                } else {
+                    return response()->json([
+                        'status' => false,
+                        'message' => 'Task not updated'
+                    ]);
+                }
+            }
+        }
+    }
+
     public function delete(Request $request)
     {
         $id = $request->id;
@@ -100,6 +143,26 @@ class categoryController extends Controller
                 'status' => false,
                 'message' => 'Not delete',
             ]);
+        }
+    }
+
+    public function status_change(Request $request)
+    {
+        $task_status = $request->task_value;
+        $task_id = $request->task_id;
+        if ($task_status) {
+            $task_update = Task::where('_id', $task_id)->update(['status' => $task_status]);
+            if ($task_update) {
+                return response()->json([
+                    'status' => true,
+                    'message' => 'Task status updated',
+                ]);
+            } else {
+                return response()->json([
+                    'status' => false,
+                    'message' => 'Task status not updated',
+                ]);
+            }
         }
     }
 }
